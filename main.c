@@ -15,6 +15,8 @@
 #include "data_types.h"
 #include "storage_engine.h"
 
+#include "btree.h"
+
 
 /*
  * parses a query command (one line), and routes it to the corresponding storage engine methods

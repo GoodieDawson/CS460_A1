@@ -16,8 +16,22 @@
 
 #include "data_types.h"
 #include "query.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <string.h>
 
 #define MAX_KEYS (1024)
+
+typedef struct Node *bpTree;
+
+bpTree btCreate(void);
+
+void bptDestroy(bpTree t);
+
+int bptSearch(bpTree t, int key);
+
+void bptInsert(bpTree t, int key);
 
 /* 
 Designing your C Structs for B+Tree nodes (Chapter 10.3.1)
@@ -33,12 +47,12 @@ struct Node {
     int isLeaf;
     int keyCount;
     int keys[MAX_KEYS];
-    struct btNode *childNds[MAX_KEYS+1]
+    struct Node *childNds[MAX_KEYS+1];
 };
 
 bpTree bptCreate(void) {
     bpTree b;
-    b = malloc(sizeof(*b));
+    b = (struct Node *)malloc(sizeof(*b));
     assert(b);
     
     b->isLeaf = 1;
@@ -50,8 +64,8 @@ bpTree bptCreate(void) {
 void bptDestroy(bpTree b) {
     int i;
     if(!b->isLeaf) {
-        for(i = 0; i < b->numKeys + 1; i++) {
-            btDestroy(b->childNds[i]);
+        for(i = 0; i < b->keyCount + 1; i++) {
+            bptDestroy(b->childNds[i]);
         }
     }
     free(b);
@@ -99,7 +113,7 @@ int bptSearch(bpTree b, int key) {
     
     i = searchNode(b->keyCount, b->keys, key);
 
-    if(i < b->numKeys && b->keys[i] == key) {
+    if(i < b->keyCount && b->keys[i] == key) {
         return 1;
     } else {
         return(!b->isLeaf && bptSearch(b->childNds[i], key));
@@ -114,53 +128,53 @@ For Splitting B+Tree Nodes (Chapter 10.8.3)
 */
 
 // TODO: here you will need to define INSERT related method(s) of adding key-values in your B+Tree.
-static bTree btInsertInternal(bTree b, int key, int *median) {
+static bpTree bptSubInsert(bpTree b, int key, int *median) {
     int pos;
     int mid;
-    bTree b2;
+    bpTree b2;
     
-    pos = searchKey(b->numKeys, b->keys, key);
+    pos = searchNode(b->keyCount, b->keys, key);
     
-    if(pos < b->numKeys && b->keys[pos] == key) {
+    if(pos < b->keyCount && b->keys[pos] == key) {
         return 0;
     }
     
     if(b->isLeaf) {
-        memmove(&b->keys[pos+1], &b->keys[pos], sizeof(*(b->keys)) * (b->numKeys - pos));
+        memmove(&b->keys[pos+1], &b->keys[pos], sizeof(*(b->keys)) * (b->keyCount - pos));
         b->keys[pos] = key;
-        b->numKeys++;
+        b->keyCount++;
         
     } else {
-        b2 = btInsertInternal(b->kids[pos], key, &mid);
+        b2 = bptSubInsert(b->childNds[pos], key, &mid);
     
         if(b2) {
 
-            memmove(&b->keys[pos+1], &b->keys[pos], sizeof(*(b->keys)) * (b->numKeys - pos));
-            memmove(&b->kids[pos+2], &b->kids[pos+1], sizeof(*(b->keys)) * (b->numKeys - pos));
+            memmove(&b->keys[pos+1], &b->keys[pos], sizeof(*(b->keys)) * (b->keyCount - pos));
+            memmove(&b->childNds[pos+2], &b->childNds[pos+1], sizeof(*(b->keys)) * (b->keyCount - pos));
             
             b->keys[pos] = mid;
-            b->kids[pos+1] = b2;
-            b->numKeys++;
+            b->childNds[pos+1] = b2;
+            b->keyCount++;
             
         }
     }
     
-    if(b->numKeys >= MAX_KEYS) {
-        mid = b->numKeys/2;
+    if(b->keyCount >= MAX_KEYS) {
+        mid = b->keyCount/2;
         
         *median = b->keys[mid];
         
-        b2 = malloc(sizeof(*b2));
+        b2 = (struct Node *)malloc(sizeof(*b2));
         
-        b2->numKeys = b->numKeys - mid - 1;
+        b2->keyCount = b->keyCount - mid - 1;
         b2->isLeaf = b->isLeaf;
         
-        memmove(b2->keys, &b->keys[mid+1], sizeof(*(b->keys)) * b2->numKeys);
+        memmove(b2->keys, &b->keys[mid+1], sizeof(*(b->keys)) * b2->keyCount);
         if(!b->isLeaf) {
-            memmove(b2->kids, &b->kids[mid+1], sizeof(*(b->kids)) * (b2->numKeys + 1));
+            memmove(b2->childNds, &b->childNds[mid+1], sizeof(*(b->childNds)) * (b2->keyCount + 1));
         }
         
-        b->numKeys = mid;
+        b->keyCount = mid;
         
         return b2;
 
@@ -169,16 +183,16 @@ static bTree btInsertInternal(bTree b, int key, int *median) {
     }
 }
 
-void btInsert(bTree b, int key) {
-    bTree b1;
-    bTree b2;
+void bptInsert(bpTree b, int key) {
+    bpTree b1;
+    bpTree b2;
     int median;
     
-    b2 = btInsertInternal(b, key, &median);
+    b2 = bptSubInsert(b, key, &median);
     
     if(b2) {
         
-        b1 = malloc(sizeof(*b1));
+        b1 = (struct Node *)malloc(sizeof(*b1));
         assert(b1);
         
         memmove(b1, b, sizeof(*b));
@@ -213,3 +227,8 @@ Can you describe a generic cost expression for Scan, measured in number of rando
 
 
 #endif
+
+/*
+Implementation was inspired and adapted from the following sources
+Aspnes, James. “BTrees.” BTrees, 17 June 2014, www.cs.yale.edu/homes/aspnes/pinewiki/BTrees.html.
+*/
