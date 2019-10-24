@@ -43,6 +43,7 @@ What is the minimum threshold of content for a node, before it has to be part of
 */
 
 // TODO: here you will need to define a B+Tree node(s) struct(s)
+//Node substructure
 struct Node { 
     int isLeaf;
     int keyCount;
@@ -50,6 +51,7 @@ struct Node {
     struct Node *childNds[MAX_KEYS+1];
 };
 
+//Constructor function
 bpTree bptCreate(void) {
     bpTree b;
     b = (struct Node *)malloc(sizeof(*b));
@@ -61,6 +63,7 @@ bpTree bptCreate(void) {
     return b;
 }
 
+//Deconstructor function
 void bptDestroy(bpTree b) {
     int i;
     if(!b->isLeaf) {
@@ -82,6 +85,7 @@ How many nodes need to be accessed during an equality search for a key, within t
 
 // TODO: here you will need to define FIND/SEARCH related method(s) of finding key-values in your B+Tree.
 
+//find function substructure (searches fo key in node using binary search)
 static int searchNode(int n, const int *keys, int key) {
     int lo;
     int hi;
@@ -90,6 +94,7 @@ static int searchNode(int n, const int *keys, int key) {
     lo = -1;
     hi = n;
     
+    //binary search
     while(lo + 1 < hi) {
         mid = (lo+hi)/2;
         if(keys[mid] == key) {
@@ -104,15 +109,19 @@ static int searchNode(int n, const int *keys, int key) {
     return hi;
 }
 
+//find function
 int bptSearch(bpTree b, int key) {
     int i;
 
+    //End if node is empty
     if(b->keyCount == 0) {
         return 0;
     }
     
+    //Search node for key
     i = searchNode(b->keyCount, b->keys, key);
 
+    //Return if found or make recursive call
     if(i < b->keyCount && b->keys[i] == key) {
         return 1;
     } else {
@@ -128,6 +137,7 @@ For Splitting B+Tree Nodes (Chapter 10.8.3)
 */
 
 // TODO: here you will need to define INSERT related method(s) of adding key-values in your B+Tree.
+//Insert substructure 
 static bpTree bptSubInsert(bpTree b, int key, int *median) {
     int pos;
     int mid;
@@ -135,10 +145,12 @@ static bpTree bptSubInsert(bpTree b, int key, int *median) {
     
     pos = searchNode(b->keyCount, b->keys, key);
     
+    //End if key is already inserted
     if(pos < b->keyCount && b->keys[pos] == key) {
         return 0;
     }
     
+    //Insert if position is available and key is new
     if(b->isLeaf) {
         memmove(&b->keys[pos+1], &b->keys[pos], sizeof(*(b->keys)) * (b->keyCount - pos));
         b->keys[pos] = key;
@@ -159,6 +171,7 @@ static bpTree bptSubInsert(bpTree b, int key, int *median) {
         }
     }
     
+    //Balancing
     if(b->keyCount >= MAX_KEYS) {
         mid = b->keyCount/2;
         
@@ -183,6 +196,7 @@ static bpTree bptSubInsert(bpTree b, int key, int *median) {
     }
 }
 
+//Insert function
 void bptInsert(bpTree b, int key) {
     bpTree b1;
     bpTree b2;
@@ -190,6 +204,7 @@ void bptInsert(bpTree b, int key) {
     
     b2 = bptSubInsert(b, key, &median);
     
+    //New root case
     if(b2) {
         
         b1 = (struct Node *)malloc(sizeof(*b1));

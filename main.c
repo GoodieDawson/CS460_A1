@@ -17,6 +17,7 @@
 
 #include "btree.h"
 
+bpTree root;
 
 /*
  * parses a query command (one line), and routes it to the corresponding storage engine methods
@@ -47,10 +48,12 @@ int parseRouteQuery(char queryLine[], STORAGECXT_t *store){
     if ( sscanf(queryLine, PUT_PATTERN, &key, &val) >= 1) {  
         // route a point query
         // TODO: hook this into your storage engine's put. b+tree's insert.
+        bptInsert(root,key);
         printf(PUT_PATTERN, key, val); // Stubbed print for now
     }else if( sscanf(queryLine, GET_PATTERN, &key) >= 1 ) {
         // route a get query
         // TODO: hook this into your storage engine's get. b+tree's find.
+        int result = bptSearch(root, key);
         printf(GET_PATTERN, key); // Stubbed print for now
     }else if( sscanf(queryLine, RANGE_PATTERN, &lowKey, &highKey) >= 1 ) {
         // route a range query
@@ -68,6 +71,8 @@ int parseRouteQuery(char queryLine[], STORAGECXT_t *store){
 
 int main(int argc, char *argv[]) 
 { 
+    root = bptCreate();
+
 	int opt; 
 
     // initial command line argument parsing
